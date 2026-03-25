@@ -1,9 +1,7 @@
-
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -762,6 +760,8 @@
       <div id="budgetForfaitBadge" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center;letter-spacing:1px;">
         🎯 Sélectionnez un forfait pour adapter la plage de budget
       </div>
+      <!-- Badge calcul automatique -->
+      <div id="budgetAutoCalc" style="display:none;align-items:center;gap:8px;background:rgba(245,166,35,0.10);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.5;"></div>
       <div class="budget-display" id="budgetDisplay">50 000 <span>FCFA</span></div>
       <input type="range" id="budgetSlider" min="10000" max="500000" step="5000" value="50000"
         oninput="updateBudget(this.value)" />
@@ -982,6 +982,10 @@
       <div class="tick">✅</div>
       <h3>Demande Envoyée !</h3>
       <p>Merci pour votre confiance.<br/>Notre équipe vous contactera dans les <strong>24 heures</strong>.</p>
+      <button type="button" onclick="genererFacture()" style="margin-top:18px;background:var(--orange);color:#111;border:none;border-radius:10px;padding:13px 28px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;cursor:pointer;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 18px rgba(245,166,35,0.4);">
+        📄 TÉLÉCHARGER MA FACTURE PRO FORMA
+      </button>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Document PDF récapitulatif de votre demande</p>
     </div>
 
   </form>
@@ -998,9 +1002,101 @@
 <script>
   function toggleService(label) {
     label.classList.toggle('checked');
+    autoCalculateBudget();
   }
 
-  // Prix des services par forfait
+  // ===== CALCUL AUTOMATIQUE DU BUDGET =====
+  // Prix numériques "dès" par service et par forfait (pour le calcul)
+  const servicePricesNum = {
+    'Base': {
+      'Flyers':                    10000,
+      'Brochures':                 30000,
+      'Maquettes':                 25000,
+      'Carte de Visite':           10000,
+      'Affiches Publicitaires':    10000,
+      'Identité Visuelle':         80000,
+      'Réalisation de Vidéos':     30000,
+      'Vidéos avec IA':            20000,
+      'Voix-Off':                  15000,
+      'Prise de vue Drone':        75000,
+      'Gestion de Pages':          50000,
+      'Couverture Événementielle': 50000,
+    },
+    'Standard': {
+      'Flyers':                    30000,
+      'Brochures':                 65000,
+      'Maquettes':                 50000,
+      'Carte de Visite':           25000,
+      'Affiches Publicitaires':    25000,
+      'Identité Visuelle':        150000,
+      'Réalisation de Vidéos':    200000,
+      'Vidéos avec IA':            80000,
+      'Voix-Off':                  40000,
+      'Prise de vue Drone':       150000,
+      'Gestion de Pages':         100000,
+      'Couverture Événementielle':100000,
+    },
+    'Premium': {
+      'Flyers':                    50000,
+      'Brochures':                120000,
+      'Maquettes':                100000,
+      'Carte de Visite':           50000,
+      'Affiches Publicitaires':    50000,
+      'Identité Visuelle':        300000,
+      'Réalisation de Vidéos':    400000,
+      'Vidéos avec IA':           150000,
+      'Voix-Off':                  80000,
+      'Prise de vue Drone':       250000,
+      'Gestion de Pages':         200000,
+      'Couverture Événementielle':180000,
+    }
+  };
+
+  function autoCalculateBudget() {
+    const forfaitInput = document.querySelector('input[name="forfait"]:checked');
+    const forfait = forfaitInput ? forfaitInput.value : null;
+    const checkedServices = [...document.querySelectorAll('input[name="services"]:checked')].map(c => c.value);
+
+    if (!forfait || checkedServices.length === 0) {
+      // Pas de calcul automatique si rien de sélectionné
+      showCalcBadge(null, checkedServices.length);
+      return;
+    }
+
+    const prices = servicePricesNum[forfait] || {};
+    let total = 0;
+    checkedServices.forEach(s => { total += prices[s] || 0; });
+
+    if (total === 0) {
+      showCalcBadge(null, checkedServices.length);
+      return;
+    }
+
+    // Ajuster le slider au total calculé
+    const slider = document.getElementById('budgetSlider');
+    const cfg = forfaitBudgets[forfait] || forfaitBudgets['default'];
+    const clampedTotal = Math.min(Math.max(total, cfg.min), cfg.max);
+    slider.value = clampedTotal;
+    updateBudget(clampedTotal);
+
+    showCalcBadge(total, checkedServices.length, forfait);
+  }
+
+  function showCalcBadge(total, count, forfait) {
+    const badge = document.getElementById('budgetAutoCalc');
+    if (!badge) return;
+    if (!total || count === 0) {
+      badge.style.display = 'none';
+      return;
+    }
+    badge.style.display = 'flex';
+    badge.innerHTML = `
+      <span style="font-size:14px;">🧮</span>
+      <span>Budget auto-calculé — <b>${count} service${count > 1 ? 's' : ''}</b> sélectionné${count > 1 ? 's' : ''} en <b style="color:var(--orange)">${forfait}</b> = <b style="color:var(--orange)">${total.toLocaleString('fr-FR')} FCFA</b> minimum</span>
+    `;
+  }
+
+  // Prix des services par forfait (texte, pour affichage dans les labels)
   const servicePrices = {
     'Base': {
       'Flyers':                   'dès 10 000 FCFA',
@@ -1098,6 +1194,9 @@
     document.getElementById('budgetForfaitBadge').innerHTML =
       `<span style="color:var(--orange);font-weight:700;">${badges[val] || val}</span> &nbsp;—&nbsp; Plage : <b>${cfg.min.toLocaleString('fr-FR')}</b> → <b>${cfg.max.toLocaleString('fr-FR')} FCFA</b>`;
 
+    // Recalcul automatique du budget avec les services cochés
+    autoCalculateBudget();
+
     // Petite animation de feedback
     const budgetSection = document.getElementById('budgetDisplay');
     budgetSection.style.transition = 'transform 0.15s, opacity 0.15s';
@@ -1170,6 +1269,243 @@
     el.addEventListener('focus', () => { swatchTarget = el.id; });
   });
 
+
+  // ===== GÉNÉRATION FACTURE PRO FORMA PDF =====
+  // Données de la dernière demande soumise (stockées à la soumission)
+  let _lastDemande = null;
+
+  function genererFacture() {
+    if (!_lastDemande) {
+      alert("Aucune demande trouvée. Veuillez soumettre le formulaire d'abord.");
+      return;
+    }
+    const d = _lastDemande;
+
+    // Calcul du détail des services
+    const forfait = d.forfait || 'Non sélectionné';
+    const servicesArr = d.services ? d.services.split(', ') : [];
+    const prices = (servicePricesNum[forfait] || {});
+    let lignesHTML = '';
+    let total = 0;
+    if (servicesArr.length > 0 && servicesArr[0] !== '') {
+      servicesArr.forEach((s, i) => {
+        const prix = prices[s] || 0;
+        total += prix;
+        lignesHTML += `
+          <tr style="border-bottom:1px solid #e8e8e8;">
+            <td style="padding:10px 14px;font-size:13px;color:#222;">${i+1}</td>
+            <td style="padding:10px 14px;font-size:13px;color:#222;">${s}</td>
+            <td style="padding:10px 14px;font-size:13px;color:#555;text-align:center;">${forfait}</td>
+            <td style="padding:10px 14px;font-size:13px;color:#F5A623;text-align:right;font-weight:700;">${prix > 0 ? prix.toLocaleString('fr-FR') + ' FCFA' : 'Sur devis'}</td>
+          </tr>`;
+      });
+    } else {
+      lignesHTML = `<tr><td colspan="4" style="padding:14px;text-align:center;color:#aaa;font-size:13px;">Aucun service sélectionné</td></tr>`;
+    }
+
+    const numFacture = 'PF-' + Date.now().toString(36).toUpperCase().slice(-6);
+    const dateAuj = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'});
+
+    const facturePage = window.open('', '_blank');
+    facturePage.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Facture Pro Forma - La Boite Kreativ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:#fff; color:#111; }
+    .page { max-width:794px; margin:0 auto; padding:48px 52px 52px; min-height:100vh; }
+
+    /* EN-TÊTE */
+    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; padding-bottom:28px; border-bottom:3px solid #F5A623; }
+    .logo-area { display:flex; align-items:center; gap:14px; }
+    .logo-box { width:52px; height:52px; background:#F5A623; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; }
+    .logo-name { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; color:#F5A623; line-height:1; }
+    .logo-sub { font-size:11px; color:#888; margin-top:2px; }
+    .facture-meta { text-align:right; }
+    .facture-title { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:#111; }
+    .facture-badge { display:inline-block; background:#F5A623; color:#111; font-size:10px; font-weight:800; letter-spacing:1.5px; padding:3px 10px; border-radius:20px; margin-top:4px; }
+    .facture-num { font-size:12px; color:#555; margin-top:6px; }
+    .facture-date { font-size:12px; color:#888; }
+
+    /* INFO BLOC */
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:32px; }
+    .info-bloc { background:#f9f9f9; border-radius:10px; padding:18px 20px; }
+    .info-bloc-title { font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#F5A623; margin-bottom:10px; }
+    .info-bloc p { font-size:13px; color:#333; line-height:1.8; }
+    .info-bloc p strong { color:#111; }
+
+    /* TABLE SERVICES */
+    .table-section { margin-bottom:28px; }
+    .table-title { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:2px; color:#111; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    table { width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; }
+    thead tr { background:#111; }
+    thead th { padding:11px 14px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#F5A623; text-align:left; }
+    thead th:last-child { text-align:right; }
+    tbody tr:nth-child(even) { background:#fafafa; }
+
+    /* TOTAL */
+    .total-section { display:flex; justify-content:flex-end; margin-bottom:32px; }
+    .total-box { background:#111; border-radius:12px; padding:18px 28px; min-width:260px; }
+    .total-label { font-size:11px; color:#888; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+    .total-amount { font-family:'Bebas Neue',sans-serif; font-size:32px; color:#F5A623; letter-spacing:2px; }
+    .total-sub { font-size:11px; color:#666; margin-top:4px; }
+
+    /* NOTES */
+    .notes { background:#fffbf2; border:1px solid #F5A62355; border-radius:10px; padding:16px 20px; margin-bottom:32px; }
+    .notes-title { font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#F5A623; margin-bottom:8px; }
+    .notes p { font-size:12px; color:#555; line-height:1.7; }
+
+    /* PROJET */
+    .projet-bloc { background:#f4f4f4; border-radius:10px; padding:16px 20px; margin-bottom:32px; }
+    .projet-titre { font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#888; margin-bottom:6px; }
+    .projet-text { font-size:13px; color:#333; line-height:1.7; }
+
+    /* FOOTER */
+    .footer { border-top:1px solid #eee; padding-top:20px; display:flex; justify-content:space-between; align-items:center; }
+    .footer-left { font-size:11px; color:#888; line-height:1.8; }
+    .footer-right { text-align:right; font-size:11px; color:#aaa; }
+    .footer-brand { font-family:'Bebas Neue',sans-serif; font-size:16px; color:#F5A623; letter-spacing:1px; }
+    .validity { font-size:11px; color:#aaa; text-align:center; margin-top:20px; font-style:italic; }
+
+    /* STATUT */
+    .statut-badge { display:inline-block; background:#fff3cd; border:1px solid #F5A62388; color:#b8860b; font-size:10px; font-weight:800; letter-spacing:1px; padding:3px 10px; border-radius:20px; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-box">🎨</div>
+      <div>
+        <div class="logo-name">La Boite Kreativ</div>
+        <div class="logo-sub">Nous donnons vie à vos rêves</div>
+      </div>
+    </div>
+    <div class="facture-meta">
+      <div class="facture-title">FACTURE PRO FORMA</div>
+      <div><span class="facture-badge">DEVIS ESTIMATIF</span></div>
+      <div class="facture-num">N° ${numFacture}</div>
+      <div class="facture-date">Émise le ${dateAuj}</div>
+    </div>
+  </div>
+
+  <!-- INFO CLIENT / AGENCE -->
+  <div class="info-grid">
+    <div class="info-bloc">
+      <div class="info-bloc-title">📋 Facturé à</div>
+      <p>
+        <strong>${d.nom || 'N/A'}</strong><br/>
+        ${d.entreprise ? d.entreprise + '<br/>' : ''}
+        ${d.tel ? '📞 ' + d.tel + '<br/>' : ''}
+        ${d.email ? '📧 ' + d.email + '<br/>' : ''}
+        ${d.secteur ? '🏭 ' + d.secteur : ''}
+      </p>
+    </div>
+    <div class="info-bloc">
+      <div class="info-bloc-title">🏢 Émis par</div>
+      <p>
+        <strong>La Boite Kreativ</strong><br/>
+        Abidjan, Côte d'Ivoire<br/>
+        📞 +225 07 68 86 27 44<br/>
+        📞 +225 07 49 39 44 66<br/>
+        📧 laboiteKreativ@gmail.com
+      </p>
+    </div>
+  </div>
+
+  <!-- DÉTAIL COMMANDE -->
+  <div class="table-section">
+    <div class="table-title">🎯 Détail des Services</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Service</th>
+          <th style="width:130px;text-align:center;">Forfait</th>
+          <th style="width:140px;">Prix Min.</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lignesHTML}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TOTAL -->
+  <div class="total-section">
+    <div class="total-box">
+      <div class="total-label">Estimation totale minimale</div>
+      <div class="total-amount">${total > 0 ? total.toLocaleString('fr-FR') + ' FCFA' : 'Sur devis'}</div>
+      <div class="total-sub">Budget sélectionné : ${d.budget || 'N/A'}</div>
+      <div style="margin-top:8px;"><span class="statut-badge">⏳ EN ATTENTE DE CONFIRMATION</span></div>
+    </div>
+  </div>
+
+  <!-- DESCRIPTION PROJET -->
+  ${d.description ? `<div class="projet-bloc">
+    <div class="projet-titre">📝 Description du projet</div>
+    <div class="projet-text">${d.description}</div>
+  </div>` : ''}
+
+  <!-- DÉLAI -->
+  ${(d.delai || d.dateDebut) ? `<div class="info-grid" style="margin-bottom:28px;">
+    ${d.delai ? `<div class="info-bloc"><div class="info-bloc-title">⏱️ Délai souhaité</div><p>${d.delai}</p></div>` : '<div></div>'}
+    ${d.dateDebut ? `<div class="info-bloc"><div class="info-bloc-title">📅 Date de début</div><p>${d.dateDebut}</p></div>` : ''}
+  </div>` : ''}
+
+  <!-- NOTES -->
+  <div class="notes">
+    <div class="notes-title">💡 Conditions & Notes</div>
+    <p>
+      • Ce document est une <strong>facture pro forma</strong> (devis estimatif) et ne constitue pas une facture définitive.<br/>
+      • Les prix indiqués sont les tarifs <strong>minimums</strong> selon le forfait sélectionné. Le devis final peut varier.<br/>
+      • Validité de ce document : <strong>30 jours</strong> à compter de la date d'émission.<br/>
+      • Tarifs négociables pour les projets long terme. Contactez-nous pour un devis personnalisé.<br/>
+      • <strong>Acompte de 50%</strong> requis à la confirmation de commande.
+    </p>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-brand">La Boite Kreativ</div>
+      Abidjan, Côte d'Ivoire<br/>
+      +225 07 68 86 27 44 / +225 07 49 39 44 66<br/>
+      laboiteKreativ@gmail.com
+    </div>
+    <div class="footer-right">
+      Réf. demande : <strong>${d.id || numFacture}</strong><br/>
+      Date : ${d.date || dateAuj}<br/>
+      Forfait : <strong style="color:#F5A623;">${forfait}</strong>
+    </div>
+  </div>
+
+  <div class="validity">Ce document a été généré automatiquement via le formulaire client de La Boite Kreativ.</div>
+
+  <!-- BOUTON IMPRESSION (masqué à l'impression) -->
+  <div class="no-print" style="text-align:center;margin-top:36px;">
+    <button onclick="window.print()" style="background:#F5A623;color:#111;border:none;border-radius:10px;padding:14px 36px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;cursor:pointer;box-shadow:0 4px 18px rgba(245,166,35,0.4);">
+      🖨️ IMPRIMER / ENREGISTRER EN PDF
+    </button>
+    <p style="font-size:12px;color:#aaa;margin-top:10px;">Dans la boîte de dialogue d'impression, choisissez <strong>"Enregistrer en PDF"</strong> comme imprimante.</p>
+  </div>
+
+</div>
+</body>
+</html>`);
+    facturePage.document.close();
+  }
+
   document.getElementById('clientForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -1189,6 +1525,18 @@
     const delai = document.getElementById('delai').value;
     const dateDebut = document.getElementById('dateDebut').value;
     const budget = document.getElementById('budgetDisplay').innerText.replace('\n', ' ');
+
+    // Calcul du budget auto pour l'admin
+    const forfaitChecked = document.querySelector('input[name="forfait"]:checked');
+    const forfaitValForCalc = forfaitChecked ? forfaitChecked.value : null;
+    const checkedServicesForCalc = [...document.querySelectorAll('input[name="services"]:checked')].map(c => c.value);
+    let budgetCalcTotal = 0;
+    if (forfaitValForCalc && servicePricesNum[forfaitValForCalc]) {
+      checkedServicesForCalc.forEach(s => { budgetCalcTotal += servicePricesNum[forfaitValForCalc][s] || 0; });
+    }
+    const budgetCalcStr = budgetCalcTotal > 0
+      ? `${budgetCalcTotal.toLocaleString('fr-FR')} FCFA (estimé auto)`
+      : budget;
 
     const services = [...document.querySelectorAll('input[name="services"]:checked')]
       .map(c => c.value).join(', ') || 'Non précisé';
@@ -1214,51 +1562,7 @@
     const whatsappBiz = document.getElementById('socialWhatsapp').value.trim() || 'Non précisé';
     const siteWeb = document.getElementById('socialSite').value.trim() || 'Non précisé';
 
-    // Build WhatsApp message
-    const msg =
-`🟧 *NOUVELLE DEMANDE CLIENT*
-━━━━━━━━━━━━━━━━━━━━
-👤 *Nom :* ${nom}
-🏢 *Entreprise :* ${entreprise || 'Non précisé'}
-📞 *Téléphone :* ${tel}
-📧 *Email :* ${email || 'Non précisé'}
-🏭 *Secteur :* ${secteur || 'Non précisé'}
-
-━━━━━━━━━━━━━━━━━━━━
-🎯 *Services souhaités :*
-${services}
-
-⭐ *Forfait :* ${forfaitVal}
-💰 *Budget :* ${budget}
-📅 *Délai :* ${delai || 'Non précisé'}
-🗓️ *Date de début :* ${dateDebut || 'Non précisé'}
-
-━━━━━━━━━━━━━━━━━━━━
-📝 *Description du projet :*
-${desc}
-
-📣 *Connu via :* ${sources}
-
-━━━━━━━━━━━━━━━━━━━━
-🖼️ *Logo fourni :* ${logoName}
-
-🎨 *Couleurs de l'entreprise :*
-  • Principale : ${couleurPrincipale}
-  • Secondaire : ${couleurSecondaire}
-  • Accent : ${couleurAccent}
-  • Fond : ${couleurFond}
-
-🌐 *Réseaux sociaux & Web :*
-  • Facebook : ${facebook}
-  • Instagram : ${instagram}
-  • TikTok : ${tiktok}
-  • LinkedIn : ${linkedin}
-  • WhatsApp Business : ${whatsappBiz}
-  • Site Web : ${siteWeb}
-━━━━━━━━━━━━━━━━━━━━
-_Formulaire La Boite Kreativ_`;
-
-    // ===== SAUVEGARDE DANS LE PANEL ADMIN =====
+    // ===== SAUVEGARDE SILENCIEUSE DANS LE PANEL ADMIN =====
     function uid() {
       return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     }
@@ -1282,7 +1586,7 @@ _Formulaire La Boite Kreativ_`;
       secteur: secteur || '',
       services: services !== 'Non précisé' ? services : '',
       forfait: forfaitVal !== 'Non sélectionné' ? forfaitVal : '',
-      budget,
+      budget: budgetCalcStr,
       delai: delai || '',
       dateDebut: dateDebut || '',
       description: desc,
@@ -1304,18 +1608,11 @@ _Formulaire La Boite Kreativ_`;
     const existingData = getData();
     existingData.push(newDemande);
     setData(existingData);
-    // ===== FIN SAUVEGARDE =====
+    // Mémoriser pour la génération de la facture
+    _lastDemande = newDemande;
+    // ===== FIN SAUVEGARDE ADMIN (silencieuse, invisible pour le client) =====
 
-    // Envoyer aux 2 numéros WhatsApp
-    const phones = ['2250768862744', '2250749394466'];
-    phones.forEach(phone => window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank'));
-
-    // Envoyer par Email (Gmail)
-    const subject = encodeURIComponent('🟧 Nouvelle demande client - La Boite Kreativ');
-    const body = encodeURIComponent(msg);
-    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=laboiteKreativ@gmail.com&su=${subject}&body=${body}`, '_blank');
-
-    // Show success
+    // Afficher le message de succès
     document.getElementById('successMsg').classList.add('show');
     document.querySelector('.submit-area').style.display = 'none';
     document.getElementById('successMsg').scrollIntoView({ behavior: 'smooth' });
