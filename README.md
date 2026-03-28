@@ -1483,7 +1483,7 @@
     <div class="footer-left">
       <div class="footer-brand">La Boite Kreativ</div>
       Abidjan, Côte d'Ivoire<br/>
-      +225 07 68 86 27 44 / +225 07 49 39 44 66<br/>
+      +225 07 68 86 27 44 / +225 07 49 39 44 66 / +225 05 75 07 61 93<br/>
       laboiteKreativ@gmail.com
     </div>
     <div class="footer-right">
