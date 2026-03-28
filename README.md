@@ -976,7 +976,7 @@
       <button type="submit" class="btn-submit">ENVOYER MA DEMANDE →</button>
       <p class="submit-note">
         Nous vous contacterons dans les <strong style="color:var(--orange)">24 heures</strong> suivant votre demande.<br/>
-        +225 07 68 86 27 44 &nbsp;|&nbsp; +225 07 49 39 44 66
+        +225 07 68 86 27 44 &nbsp;|&nbsp; +225 07 49 39 44 66 &nbsp;|&nbsp;  +225 05 75 07 61 93
       </p>
     </div>
 
@@ -996,7 +996,7 @@
   <footer>
     <p>
       <strong>La Boite Kreativ</strong> — Abidjan, Côte d'Ivoire<br/>
-      +225 07 68 86 27 44 &nbsp;/&nbsp; +225 07 49 39 44 66
+      +225 07 68 86 27 44 &nbsp;/&nbsp; +225 07 49 39 44 66 &nbsp;|&nbsp;  +225 05 75 07 61 93
     </p>
   </footer>
 
